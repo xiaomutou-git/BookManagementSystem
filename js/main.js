@@ -1078,7 +1078,9 @@ function initAccessControl() {
             '/add-book.html',
             '/edit-book/',
             '/categories/',
-            '/categories.html'
+            '/categories.html',
+            '/action-logs/',
+            '/action-logs.html'
         ];
 
         // 获取当前页面路径
@@ -1165,7 +1167,8 @@ function initRoleNavbar() {
             navItems.push(
                 { href: '/books/', text: '图书列表', page: 'books' },
                 { href: '/add-book/', text: '添加图书', page: 'add-book' },
-                { href: '/categories/', text: '分类管理', page: 'categories' }
+                { href: '/categories/', text: '分类管理', page: 'categories' },
+                { href: '/action-logs/', text: '操作日志', page: 'action-logs' }
             );
         }
 

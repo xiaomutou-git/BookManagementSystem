@@ -1,0 +1,364 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>操作日志 - 图书管理系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* 操作日志页专属样式 */
+        .logs-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 1.25rem;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-md);
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            font-size: 0.875rem;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+
+        /* 日志列表 */
+        .log-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .log-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: var(--card-background);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            padding: 1rem 1.25rem;
+            transition: var(--transition);
+        }
+
+        .log-item:hover {
+            border-color: var(--border-strong);
+            box-shadow: var(--shadow-md);
+        }
+
+        .log-user {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 8rem;
+        }
+
+        .log-user .avatar {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary-hover);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .log-user .username {
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 0.875rem;
+        }
+
+        .log-type {
+            flex-shrink: 0;
+            min-width: 5rem;
+            text-align: center;
+        }
+
+        .log-type .badge {
+            display: inline-block;
+            padding: 0.25rem 0.625rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .badge-create { background: rgba(6, 182, 212, 0.12); color: #0891b2; }
+        .badge-edit   { background: rgba(180, 83, 9, 0.12); color: #b45309; }
+        .badge-delete { background: rgba(185, 28, 28, 0.12); color: #b91c1c; }
+        .badge-borrow { background: rgba(2, 132, 199, 0.12); color: #0284c7; }
+        .badge-return { background: rgba(21, 128, 61, 0.12); color: #15803d; }
+        .badge-login  { background: rgba(79, 70, 229, 0.12); color: #4f46e5; }
+        .badge-default{ background: var(--surface-hover); color: var(--text-secondary); }
+
+        .log-desc {
+            flex: 1;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            min-width: 0;
+        }
+
+        .log-time {
+            flex-shrink: 0;
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <i class="fas fa-book-open"></i>
+                <h1>图书管理系统</h1>
+            </div>
+            <div class="navbar-nav">
+                <a href="/" class="nav-link" data-page="home">首页</a>
+            </div>
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="搜索图书...">
+                <button id="search-btn"><i class="fas fa-search"></i></button>
+            </div>
+            <!-- 用户登录/菜单区域 -->
+            <div class="user-menu-container">
+                <div id="login-btn-container" class="user-menu-item">
+                    <a href="/login/" class="btn btn-primary login-btn">登录</a>
+                </div>
+                <div id="user-dropdown-container" class="user-menu-item" style="display: none;">
+                    <div class="user-dropdown-trigger">
+                        <span id="current-username" class="username"></span>
+                        <i class="fas fa-caret-down"></i>
+                    </div>
+                    <div class="user-dropdown-menu">
+                        <a href="#" class="dropdown-item" id="edit-profile-btn">
+                            <i class="fas fa-user-edit"></i> 编辑个人信息
+                        </a>
+                        <a href="#" class="dropdown-item" id="settings-btn">
+                            <i class="fas fa-cog"></i> 设置
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item logout-btn" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+        <section id="action-logs" class="page active">
+            <div class="container">
+                <div class="logs-header">
+                    <h2>操作日志</h2>
+                    <button class="btn btn-secondary" id="refresh-logs-btn">
+                        <i class="fas fa-sync-alt"></i> 刷新
+                    </button>
+                </div>
+
+                <!-- 过滤条件 -->
+                <div class="filter-container">
+                    <div class="filter-group">
+                        <label for="action-type-filter">操作类型:</label>
+                        <select id="action-type-filter">
+                            <option value="">全部</option>
+                            <option value="login">登录</option>
+                            <option value="logout">登出</option>
+                            <option value="borrow">借阅</option>
+                            <option value="return">归还</option>
+                            <option value="create">创建</option>
+                            <option value="edit">编辑</option>
+                            <option value="delete">删除</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="log-username">操作用户:</label>
+                        <input type="text" id="log-username" placeholder="输入用户名">
+                    </div>
+                    <button class="btn btn-primary" id="apply-filter-btn">
+                        <i class="fas fa-filter"></i> 筛选
+                    </button>
+                    <button class="btn btn-outline" id="reset-filter-btn">重置</button>
+                </div>
+
+                <!-- 日志列表 -->
+                <div class="log-list" id="log-list">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2023 图书管理系统. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript文件 -->
+    <script src="/js/data.js?v=10"></script>
+    <script src="/js/ui.js?v=10"></script>
+    <script src="/js/main.js?v=10"></script>
+    <script>
+        /**
+         * 操作日志类型中文映射
+         */
+        const ACTION_TYPE_LABELS = {
+            login: '登录', logout: '登出', borrow: '借阅', return: '归还',
+            create: '创建', edit: '编辑', delete: '删除', search: '搜索'
+        };
+
+        /**
+         * 获取操作类型对应的徽章样式类
+         * @param {string} type 操作类型标识
+         * @returns {string} 徽章样式类名
+         */
+        function getBadgeClass(type) {
+            const map = {
+                create: 'badge-create', edit: 'badge-edit', delete: 'badge-delete',
+                borrow: 'badge-borrow', return: 'badge-return', login: 'badge-login'
+            };
+            return map[type] || 'badge-default';
+        }
+
+        /**
+         * 加载并渲染操作日志列表
+         * 根据当前过滤条件请求后端日志接口并展示
+         * @returns {Promise<void>} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        async function loadLogs() {
+            const logList = document.getElementById('log-list');
+            if (!logList) return;
+
+            logList.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                </div>
+            `;
+
+            try {
+                // 读取过滤条件
+                const actionType = document.getElementById('action-type-filter').value;
+                const username = document.getElementById('log-username').value.trim();
+
+                const logs = await ActionLogData.getLogs({ action_type: actionType, username });
+
+                if (logs.length === 0) {
+                    logList.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-history"></i>
+                            <h3>暂无操作日志</h3>
+                            <p>系统会产生操作日志，登录后可查看。</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // 渲染日志列表
+                logList.innerHTML = logs.map(log => {
+                    const userName = log.user ? log.user.username : '系统';
+                    const typeLabel = ACTION_TYPE_LABELS[log.action_type] || log.action_type;
+                    const badgeClass = getBadgeClass(log.action_type);
+                    const timeStr = log.created_at ? new Date(log.created_at).toLocaleString('zh-CN') : '';
+                    const avatarChar = (userName || '?').charAt(0).toUpperCase();
+                    return `
+                        <div class="log-item">
+                            <div class="log-user">
+                                <div class="avatar">${escapeHtml(avatarChar)}</div>
+                                <span class="username">${escapeHtml(userName)}</span>
+                            </div>
+                            <div class="log-type">
+                                <span class="badge ${badgeClass}">${escapeHtml(typeLabel)}</span>
+                            </div>
+                            <div class="log-desc">${escapeHtml(log.description || '')}</div>
+                            <div class="log-time">${escapeHtml(timeStr)}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('加载操作日志失败:', error);
+                logList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h3>加载失败</h3>
+                        <p>${escapeHtml(error.message || '操作日志加载失败，请刷新页面重试。')}</p>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * 页面加载完成后初始化操作日志页
+         * 绑定筛选/刷新事件，并首次加载日志
+         * @returns {void} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // 筛选按钮
+                const applyBtn = document.getElementById('apply-filter-btn');
+                if (applyBtn) applyBtn.addEventListener('click', loadLogs);
+
+                // 重置按钮
+                const resetBtn = document.getElementById('reset-filter-btn');
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', () => {
+                        document.getElementById('action-type-filter').value = '';
+                        document.getElementById('log-username').value = '';
+                        loadLogs();
+                    });
+                }
+
+                // 刷新按钮
+                const refreshBtn = document.getElementById('refresh-logs-btn');
+                if (refreshBtn) refreshBtn.addEventListener('click', loadLogs);
+
+                // 首次加载
+                loadLogs();
+            } catch (error) {
+                console.error('初始化操作日志页失败:', error);
+            }
+        });
+    </script>
+</body>
+</html>

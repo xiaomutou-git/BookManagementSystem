@@ -8,7 +8,7 @@ from django.utils import timezone
 from datetime import timedelta
 from rest_framework.test import APIClient
 
-from .models import Category, Book, UserProfile, BorrowRecord, BookReview
+from .models import Category, Book, UserProfile, BorrowRecord, BookReview, ActionLog
 
 
 class BaseTestCase(TestCase):
@@ -207,3 +207,48 @@ class ReviewTests(BaseTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(float(resp.data['avg_rating']), 3.0)
         self.assertEqual(resp.data['review_count'], 2)
+
+
+class ActionLogTests(BaseTestCase):
+    """操作日志记录与查看权限测试"""
+
+    def test_borrow_creates_log(self):
+        """借阅操作生成操作日志"""
+        self.user_client.post('/api/borrow-records/', {'book': self.book.id})
+        self.assertTrue(ActionLog.objects.filter(
+            user=self.user, action_type='borrow', object_type='Book'
+        ).exists())
+
+    def test_book_create_creates_log(self):
+        """管理员创建图书生成操作日志"""
+        self.admin_client.post('/api/books/', {
+            'title': '日志测试图书', 'author': '测试', 'category': self.category.id
+        })
+        self.assertTrue(ActionLog.objects.filter(
+            user=self.admin, action_type='create', object_type='Book',
+            description__contains='日志测试图书'
+        ).exists())
+
+    def test_category_create_creates_log(self):
+        """管理员创建分类生成操作日志"""
+        self.admin_client.post('/api/categories/', {'name': '日志测试分类', 'description': ''})
+        self.assertTrue(ActionLog.objects.filter(
+            user=self.admin, action_type='create', object_type='Category',
+            description__contains='日志测试分类'
+        ).exists())
+
+    def test_review_creates_log(self):
+        """提交书评生成操作日志"""
+        self.user_client.post('/api/reviews/', {
+            'book': self.book.id, 'rating': 4, 'comment': '测试评论'
+        })
+        self.assertTrue(ActionLog.objects.filter(
+            user=self.user, action_type='create', object_type='BookReview'
+        ).exists())
+
+    def test_regular_user_cannot_view_logs(self):
+        """普通用户不能访问操作日志接口（仅管理员）"""
+        resp = self.user_client.get('/api/action-logs/')
+        self.assertIn(resp.status_code, (401, 403))
+        resp = self.admin_client.get('/api/action-logs/')
+        self.assertEqual(resp.status_code, 200)

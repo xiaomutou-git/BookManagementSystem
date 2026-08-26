@@ -261,3 +261,23 @@ const BookReviewData = {
         return data;
     }
 };
+
+// 操作日志数据管理
+const ActionLogData = {
+    /**
+     * 获取操作日志列表（仅管理员可用）
+     * 复用统一 apiRequest 自动附加认证 token，支持按操作类型与用户名过滤
+     * @param {object} [filters={}] 过滤条件 { action_type, username }
+     * @returns {Promise<Array>} 操作日志数组
+     * @throws {Error} 请求失败或未登录/无权限时抛出
+     */
+    async getLogs(filters = {}) {
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('用户未登录');
+        const params = new URLSearchParams();
+        if (filters.action_type) params.append('action_type', filters.action_type);
+        if (filters.username) params.append('username', filters.username);
+        const data = await apiRequest(`/action-logs/?${params.toString()}`);
+        return unwrapList(data);
+    }
+};
