@@ -1,10 +1,10 @@
-# 📚 Django 图书管理系统
+# Django 图书管理系统
 
 一个基于 **Django + Django REST Framework + SQLite** 的完整图书管理系统，支持图书 / 分类管理、在线借阅归还、库存控制、书评评分、按角色（游客 / 普通用户 / 管理员）的动态界面，以及登录防暴力破解、权限控制等安全能力。
 
 ---
 
-## ✨ 功能特性
+## 功能特性
 
 ### 图书与分类
 - 图书增删改查、按书名 / 作者 / ISBN / 简介模糊搜索
@@ -37,7 +37,7 @@
 
 ---
 
-## 🧱 技术栈
+## 技术栈
 
 | 层 | 技术 |
 | --- | --- |
@@ -49,7 +49,7 @@
 
 ---
 
-## 📁 目录结构
+## 目录结构
 
 ```
 Django图书管理系统/
@@ -79,7 +79,7 @@ Django图书管理系统/
 
 ---
 
-## 🚀 快速开始
+## 快速开始
 
 ### 1. 环境要求
 - Python 3.10+
@@ -117,7 +117,7 @@ python manage.py runserver
 
 ---
 
-## 🔐 环境变量配置
+## 环境变量配置
 
 | 变量 | 说明 | 默认值 |
 | --- | --- | --- |
@@ -131,11 +131,11 @@ python manage.py runserver
 | `DJANGO_CACHE_BACKEND` | 缓存后端（`db` / `redis`） | `db` |
 | `DJANGO_REDIS_URL` | 使用 Redis 时的连接地址 | `redis://127.0.0.1:6379/1` |
 
-> ⚠️ 生产部署建议：`DJANGO_DEBUG=False`、使用强 `DJANGO_SECRET_KEY`、配置 `DJANGO_ALLOWED_HOSTS` 与 `CORS_ALLOWED_ORIGINS`，并可按需开启 **Redis** 缓存以提升限流并发能力。
+> 生产部署建议：`DJANGO_DEBUG=False`、使用强 `DJANGO_SECRET_KEY`、配置 `DJANGO_ALLOWED_HOSTS` 与 `CORS_ALLOWED_ORIGINS`，并可按需开启 **Redis** 缓存以提升限流并发能力。
 
 ---
 
-## 🔌 API 一览
+## API 一览
 
 | 方法 | 地址 | 说明 | 权限 |
 | --- | --- | --- | --- |
@@ -154,7 +154,7 @@ python manage.py runserver
 
 ---
 
-## 🧪 自动化测试
+## 自动化测试
 
 ```bash
 python manage.py test library -v 2
@@ -164,7 +164,7 @@ python manage.py test library -v 2
 
 ---
 
-## 📄 使用说明
+## 使用说明
 
 1. **游客**：可直接浏览图书与搜索，登录后可借阅。
 2. **普通用户**：在「用户中心」「我的借阅」中借书、还书、查看逾期情况；在图书详情页评分评论。
@@ -172,6 +172,6 @@ python manage.py test library -v 2
 
 ---
 
-## 📃 开源说明
+## 开源说明
 
 本项目用于学习与演示，代码遵循 Python 与 Web 开发常见最佳实践。如需在生产环境使用，请结合实际情况完成安全审计（HTTPS、密钥管理、备份策略等）。
