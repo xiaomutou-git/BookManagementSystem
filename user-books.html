@@ -1,0 +1,443 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图书查询 - 图书管理系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <i class="fas fa-book-open"></i>
+                <h1>图书管理系统</h1>
+            </div>
+            <div class="navbar-nav">
+                <a href="/user-home/" class="nav-link" data-page="home">首页</a>
+                <a href="/user-dashboard/" class="nav-link" data-page="user-dashboard">用户中心</a>
+                <a href="/user-books/" class="nav-link active" data-page="user-books">图书查询</a>
+                <a href="/user-borrow-records/" class="nav-link" data-page="user-borrow-records">借阅记录</a>
+            </div>
+            <div class="user-menu-container">
+                <div id="user-dropdown-container" class="user-menu-item" style="display: none;">
+                    <div class="user-dropdown-trigger">
+                        <span id="current-username" class="username"></span>
+                        <i class="fas fa-caret-down"></i>
+                    </div>
+                    <div class="user-dropdown-menu">
+                        <a href="#" class="dropdown-item" id="edit-profile-btn">
+                            <i class="fas fa-user-edit"></i> 编辑个人信息
+                        </a>
+                        <a href="#" class="dropdown-item" id="settings-btn">
+                            <i class="fas fa-cog"></i> 设置
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item logout-btn" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+        <section id="user-books" class="page active">
+            <div class="container">
+                <div class="books-header">
+                    <h2>图书查询</h2>
+                </div>
+
+                <!-- 过滤和搜索 -->
+                <div class="filter-container">
+                    <div class="filter-group">
+                        <label for="search-input">搜索:</label>
+                        <input type="text" id="search-input" placeholder="搜索图书...">
+                        <button id="search-btn" class="btn btn-primary">
+                            <i class="fas fa-search"></i> 搜索
+                        </button>
+                    </div>
+                    <div class="filter-group">
+                        <label for="category-filter">分类:</label>
+                        <select id="category-filter">
+                            <option value="">全部分类</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="rating-filter">最低评分:</label>
+                        <select id="rating-filter">
+                            <option value="0">全部评分</option>
+                            <option value="4.5">4.5+</option>
+                            <option value="4.0">4.0+</option>
+                            <option value="3.5">3.5+</option>
+                            <option value="3.0">3.0+</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <button id="reset-filter" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i> 重置
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 图书网格 -->
+                <div class="books-grid" id="books-grid">
+                    <!-- 图书卡片将通过JavaScript动态生成 -->
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 图书详情模态框 -->
+    <div class="modal" id="book-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">图书详情</h3>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- 图书详情将通过JavaScript动态生成 -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-cancel">取消</button>
+                <button class="btn btn-primary" id="borrow-btn">借阅图书</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2023 图书管理系统. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript文件 -->
+    <script src="/js/data.js?v=9"></script>
+    <script src="/js/ui.js?v=9"></script>
+    <script src="/js/main.js?v=9"></script>
+    <script>
+        /**
+         * 当前选中的图书ID，用于借阅操作
+         * @type {number|null}
+         */
+        let selectedBookId = null;
+
+        /**
+         * 页面加载完成后初始化图书查询页
+         * 检查登录状态、渲染分类过滤器和图书列表、设置事件监听器
+         * @returns {void} 无返回值
+         * @throws {Error} 初始化失败时打印错误日志
+         */
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                let userData = null;
+                try {
+                    userData = JSON.parse(localStorage.getItem('user'));
+                } catch (parseError) {
+                    console.warn('解析用户信息失败:', parseError);
+                }
+                if (!userData) {
+                    window.location.href = '/login/';
+                    return;
+                }
+
+                await renderCategoryFilter();
+                await renderBooks();
+                setupEventListeners();
+            } catch (error) {
+                console.error('初始化失败:', error);
+            }
+        });
+
+        /**
+         * 渲染分类过滤器
+         * 获取分类列表并填充到下拉选择框中
+         * @returns {void} 无返回值
+         * @throws {Error} 请求失败时静默处理
+         */
+        async function renderCategoryFilter() {
+            try {
+                const categories = await CategoryData.getAllCategories();
+                const categoryFilter = document.getElementById('category-filter');
+                if (!categoryFilter) return;
+
+                categoryFilter.innerHTML = '<option value="">全部分类</option>';
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category.id;
+                    option.textContent = category.name;
+                    categoryFilter.appendChild(option);
+                });
+            } catch (error) {
+                console.error('渲染分类过滤器失败:', error);
+            }
+        }
+
+        /**
+         * 渲染图书列表
+         * 根据搜索条件获取图书数据，生成图书卡片并添加事件监听器
+         * @param {string} [searchQuery=''] 搜索关键词
+         * @param {string} [categoryId=''] 分类ID
+         * @param {number} [minRating=0] 最低评分
+         * @returns {void} 无返回值
+         * @throws {Error} 渲染失败时显示错误提示
+         */
+        async function renderBooks(searchQuery = '', categoryId = '', minRating = 0) {
+            const booksGrid = document.getElementById('books-grid');
+            if (!booksGrid) return;
+
+            booksGrid.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                </div>
+            `;
+
+            try {
+                // 通过数据模块搜索图书（图书接口不启用分页，直接返回数组）
+                let books = await BookData.searchBooks(searchQuery, categoryId, minRating);
+                if (!Array.isArray(books)) books = [];
+
+                books = UI.sortBooks(books, getDefaultBookSort());
+
+                if (books.length === 0) {
+                    booksGrid.innerHTML = `
+                        <div class="no-results">
+                            <i class="fas fa-search"></i>
+                            <h3>未找到图书</h3>
+                            <p>没有符合条件的图书，请尝试其他搜索条件。</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // 渲染图书卡片（对用户可控字段做 HTML 转义，防止 XSS）
+                booksGrid.innerHTML = books.map(book => {
+                    const availableCopies = Number(book.available_copies) || 0;
+                    return `
+                        <div class="book-card">
+                            <div class="book-card-image">
+                                ${book.cover_image ? `<img src="${escapeHtml(book.cover_image)}" alt="${escapeHtml(book.title)}">` : '<i class="fas fa-book"></i>'}
+                            </div>
+                            <div class="book-card-content">
+                                <h3 class="book-card-title">${escapeHtml(book.title)}</h3>
+                                <p class="book-card-author">${escapeHtml(book.author)}</p>
+                                <div class="book-card-meta">
+                                    <span class="book-card-category">${escapeHtml(book.category && book.category.name)}</span>
+                                    <span class="book-card-rating">
+                                        <i class="fas fa-star"></i>
+                                        ${escapeHtml(Number(book.rating).toFixed(1))}
+                                    </span>
+                                </div>
+                                <div class="book-card-stock">
+                                    ${availableCopies > 0
+                                        ? `<span class="stock-available">可借 ${escapeHtml(availableCopies)} 本</span>`
+                                        : '<span class="stock-empty">暂时无库存</span>'}
+                                </div>
+                                <p class="book-card-description">${escapeHtml(book.description || '暂无描述')}</p>
+                                <div class="book-card-actions">
+                                    <button class="btn btn-primary view-btn" data-id="${escapeHtml(book.id)}">
+                                        <i class="fas fa-eye"></i> 查看
+                                    </button>
+                                    ${availableCopies > 0 ? `
+                                    <button class="btn btn-secondary borrow-btn" data-id="${escapeHtml(book.id)}">
+                                        <i class="fas fa-book-open"></i> 借阅
+                                    </button>
+                                    ` : `
+                                    <button class="btn btn-secondary btn-disabled" disabled>
+                                        <i class="fas fa-book-open"></i> 暂无库存
+                                    </button>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                addBookCardEventListeners();
+            } catch (error) {
+                console.error('渲染图书列表失败:', error);
+                booksGrid.innerHTML = `
+                    <div class="no-results">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h3>加载失败</h3>
+                        <p>图书数据加载失败，请刷新页面重试。</p>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * 添加图书卡片事件监听器
+         * 为查看按钮和借阅按钮绑定点击事件
+         * @returns {void} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        function addBookCardEventListeners() {
+            try {
+                document.querySelectorAll('.view-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const bookId = e.target.closest('.btn').dataset.id;
+                        showBookDetails(bookId);
+                    });
+                });
+
+                document.querySelectorAll('.borrow-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const bookId = e.target.closest('.btn').dataset.id;
+                        showBookDetails(bookId, true);
+                    });
+                });
+            } catch (error) {
+                console.error('添加图书卡片事件监听器失败:', error);
+            }
+        }
+
+        /**
+         * 显示图书详情模态框
+         * 获取图书详情数据，渲染到模态框中并显示
+         * @param {number} bookId 图书ID
+         * @param {boolean} [showBorrowBtn=false] 是否显示借阅按钮
+         * @returns {void} 无返回值
+         * @throws {Error} 获取详情失败时打印错误日志
+         */
+        async function showBookDetails(bookId, showBorrowBtn = false) {
+            selectedBookId = bookId;
+
+            try {
+                const book = await BookData.getBookById(bookId);
+                const availableCopies = Number(book.available_copies) || 0;
+                const totalCopies = Number(book.total_copies) || 1;
+
+                const modalBody = document.getElementById('modal-body');
+                if (!modalBody) return;
+
+                modalBody.innerHTML = `
+                    <div style="display: flex; gap: 1.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <div style="flex: 1; max-width: 200px; min-width: 140px;">
+                            ${book.cover_image
+                                ? `<img src="${escapeHtml(book.cover_image)}" alt="${escapeHtml(book.title)}" style="max-width: 100%; height: auto; border-radius: var(--border-radius);">`
+                                : '<div style="width: 100%; height: 200px; background: var(--surface-hover); display: flex; justify-content: center; align-items: center; border-radius: var(--border-radius);"><i class="fas fa-book" style="font-size: 4rem; color: var(--text-muted);"></i></div>'}
+                        </div>
+                        <div style="flex: 2; min-width: 200px;">
+                            <h4 style="margin-top: 0; margin-bottom: 0.5rem;">${escapeHtml(book.title)}</h4>
+                            <p style="color: var(--text-secondary); margin-bottom: 1rem;">作者: ${escapeHtml(book.author)}</p>
+                            <div style="margin-bottom: 1rem;">
+                                <span style="background: var(--primary-light); color: var(--primary-color); padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.8rem; margin-right: 0.5rem;">${escapeHtml(book.category && book.category.name)}</span>
+                                <span style="color: var(--accent-color); font-weight: 500;">
+                                    <i class="fas fa-star"></i> ${escapeHtml(Number(book.rating).toFixed(1))}
+                                </span>
+                            </div>
+                            <p style="margin-bottom: 0.5rem;"><strong>ISBN:</strong> ${escapeHtml(book.isbn || '未提供')}</p>
+                            <p style="margin-bottom: 0.5rem;"><strong>出版日期:</strong> ${escapeHtml(book.publish_date ? new Date(book.publish_date).toLocaleDateString() : '未提供')}</p>
+                            <p style="margin-bottom: 0.5rem;">
+                                <strong>库存:</strong>
+                                ${availableCopies > 0
+                                    ? `<span class="stock-available">可借 ${escapeHtml(availableCopies)} / ${escapeHtml(totalCopies)} 本</span>`
+                                    : '<span class="stock-empty">暂时无库存</span>'}
+                            </p>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <h5>内容简介</h5>
+                        <p style="color: var(--text-secondary); line-height: 1.5;">${escapeHtml(book.description || '暂无描述')}</p>
+                    </div>
+                `;
+
+                document.getElementById('modal-title').textContent = book.title;
+
+                // 控制借阅按钮显示/禁用
+                const borrowBtn = document.getElementById('borrow-btn');
+                if (borrowBtn) {
+                    borrowBtn.style.display = availableCopies > 0 ? 'inline-flex' : 'none';
+                }
+
+                document.getElementById('book-modal').classList.add('active');
+            } catch (error) {
+                console.error('获取图书详情失败:', error);
+                UI.showMessage('获取图书详情失败，请重试', 'error');
+            }
+        }
+
+        /**
+         * 设置页面事件监听器
+         * 绑定搜索、过滤、模态框关闭和借阅等事件
+         * @returns {void} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        function setupEventListeners() {
+            try {
+                const searchBtn = document.getElementById('search-btn');
+                const searchInput = document.getElementById('search-input');
+                const categoryFilter = document.getElementById('category-filter');
+                const ratingFilter = document.getElementById('rating-filter');
+                const resetFilter = document.getElementById('reset-filter');
+
+                // 执行搜索（复用当前过滤条件）
+                const doSearch = () => {
+                    renderBooks(
+                        searchInput ? searchInput.value.trim() : '',
+                        categoryFilter ? categoryFilter.value : '',
+                        ratingFilter ? parseFloat(ratingFilter.value) || 0 : 0
+                    );
+                };
+
+                if (searchBtn) searchBtn.addEventListener('click', doSearch);
+                if (searchInput) searchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') doSearch();
+                });
+                if (categoryFilter) categoryFilter.addEventListener('change', doSearch);
+                if (ratingFilter) ratingFilter.addEventListener('change', doSearch);
+                if (resetFilter) resetFilter.addEventListener('click', () => {
+                    if (searchInput) searchInput.value = '';
+                    if (categoryFilter) categoryFilter.value = '';
+                    if (ratingFilter) ratingFilter.value = '0';
+                    renderBooks();
+                });
+
+                // 模态框关闭事件
+                const modal = document.getElementById('book-modal');
+                const modalClose = document.getElementById('modal-close');
+                const modalCancel = document.getElementById('modal-cancel');
+
+                const closeModal = () => modal.classList.remove('active');
+
+                if (modalClose) modalClose.addEventListener('click', closeModal);
+                if (modalCancel) modalCancel.addEventListener('click', closeModal);
+                if (modal) {
+                    modal.addEventListener('click', (e) => {
+                        if (e.target.id === 'book-modal') closeModal();
+                    });
+                }
+
+                // 借阅按钮事件
+                const borrowBtn = document.getElementById('borrow-btn');
+                if (borrowBtn) {
+                    borrowBtn.addEventListener('click', async () => {
+                        if (!selectedBookId) return;
+                        try {
+                            await BorrowRecordData.borrow(selectedBookId);
+                            UI.showMessage('图书借阅成功！', 'success');
+                            closeModal();
+                            // 刷新图书列表（库存变化）
+                            doSearch();
+                        } catch (error) {
+                            console.error('借阅图书失败:', error);
+                            UI.showMessage(error.message || '借阅图书失败，请稍后重试。', 'error');
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('设置事件监听器失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>
