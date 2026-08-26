@@ -46,6 +46,8 @@ urlpatterns = [
     path('search-results.html', TemplateView.as_view(template_name='search-results.html')),
     path('categories/', TemplateView.as_view(template_name='categories.html')),
     path('categories.html', TemplateView.as_view(template_name='categories.html')),
+    path('action-logs/', TemplateView.as_view(template_name='action-logs.html')),
+    path('action-logs.html', TemplateView.as_view(template_name='action-logs.html')),
     
     # 用户端页面路由
     path('user-home/', TemplateView.as_view(template_name='user-home.html')),

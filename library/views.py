@@ -187,6 +187,53 @@ class CategoryViewSet(viewsets.ModelViewSet):
             return [IsAdmin()]
         return [permissions.AllowAny()]
 
+    def perform_create(self, serializer):
+        """
+        创建分类并记录操作日志
+        @param serializer: 分类序列化器实例
+        """
+        instance = serializer.save()
+        ActionLog.objects.create(
+            user=self.request.user,
+            action_type='create',
+            object_type='Category',
+            object_id=instance.id,
+            description=f'创建分类：{instance.name}',
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
+
+    def perform_update(self, serializer):
+        """
+        更新分类并记录操作日志
+        @param serializer: 分类序列化器实例
+        """
+        instance = serializer.save()
+        ActionLog.objects.create(
+            user=self.request.user,
+            action_type='edit',
+            object_type='Category',
+            object_id=instance.id,
+            description=f'编辑分类：{instance.name}',
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
+
+    def perform_destroy(self, instance):
+        """
+        删除分类并记录操作日志
+        @param instance: 待删除的分类实例
+        """
+        name = instance.name
+        category_id = instance.id
+        instance.delete()
+        ActionLog.objects.create(
+            user=self.request.user,
+            action_type='delete',
+            object_type='Category',
+            object_id=category_id,
+            description=f'删除分类：{name}',
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
+
 class BookViewSet(viewsets.ModelViewSet):
     """图书视图集：读公开，写操作仅限管理员"""
     queryset = Book.objects.all()
@@ -233,12 +280,53 @@ class BookViewSet(viewsets.ModelViewSet):
             available_copies = total_copies
         # 如果用户已认证，将创建者设置为当前用户
         if self.request.user.is_authenticated:
-            serializer.save(created_by=self.request.user,
-                            total_copies=total_copies,
-                            available_copies=available_copies)
+            instance = serializer.save(created_by=self.request.user,
+                                       total_copies=total_copies,
+                                       available_copies=available_copies)
         else:
-            serializer.save(total_copies=total_copies,
-                            available_copies=available_copies)
+            instance = serializer.save(total_copies=total_copies,
+                                       available_copies=available_copies)
+        # 记录创建图书日志
+        ActionLog.objects.create(
+            user=self.request.user,
+            action_type='create',
+            object_type='Book',
+            object_id=instance.id,
+            description=f'创建图书：{instance.title}',
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
+
+    def perform_update(self, serializer):
+        """
+        更新图书并记录操作日志
+        @param serializer: 图书序列化器实例
+        """
+        instance = serializer.save()
+        ActionLog.objects.create(
+            user=self.request.user,
+            action_type='edit',
+            object_type='Book',
+            object_id=instance.id,
+            description=f'编辑图书：{instance.title}',
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
+
+    def perform_destroy(self, instance):
+        """
+        删除图书并记录操作日志
+        @param instance: 待删除的图书实例
+        """
+        title = instance.title
+        book_id = instance.id
+        instance.delete()
+        ActionLog.objects.create(
+            user=self.request.user,
+            action_type='delete',
+            object_type='Book',
+            object_id=book_id,
+            description=f'删除图书：{title}',
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
 
     def list(self, request, *args, **kwargs):
         # 支持搜索和过滤
@@ -522,8 +610,42 @@ class BookReviewViewSet(viewsets.ModelViewSet):
             existing.rating = serializer.validated_data.get('rating', existing.rating)
             existing.comment = serializer.validated_data.get('comment', existing.comment)
             existing.save()
+            ActionLog.objects.create(
+                user=user,
+                action_type='edit',
+                object_type='BookReview',
+                object_id=existing.id,
+                description=f'更新评价《{book.title}》：{existing.rating} 分',
+                ip_address=self.request.META.get('REMOTE_ADDR')
+            )
             return existing
-        return serializer.save(user=user)
+        instance = serializer.save(user=user)
+        ActionLog.objects.create(
+            user=user,
+            action_type='create',
+            object_type='BookReview',
+            object_id=instance.id,
+            description=f'评价《{book.title}》：{instance.rating} 分',
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
+        return instance
+
+    def perform_destroy(self, instance):
+        """
+        删除书评并记录操作日志
+        @param instance: 待删除的书评实例
+        """
+        title = instance.book.title
+        review_id = instance.id
+        instance.delete()
+        ActionLog.objects.create(
+            user=self.request.user,
+            action_type='delete',
+            object_type='BookReview',
+            object_id=review_id,
+            description=f'删除对《{title}》的评论',
+            ip_address=self.request.META.get('REMOTE_ADDR')
+        )
 
 class ActionLogViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = ActionLog.objects.all()
@@ -532,7 +654,19 @@ class ActionLogViewSet(viewsets.ReadOnlyModelViewSet):
     authentication_classes = [TokenAuthentication]
     
     def get_queryset(self):
+        """
+        按时间倒序返回操作日志，支持按操作类型与用户过滤
+        @return QuerySet: 过滤后的操作日志集合
+        """
         queryset = super().get_queryset()
+        # 支持按操作类型过滤（如 create/edit/delete/borrow/return/login）
+        action_type = self.request.query_params.get('action_type', None)
+        if action_type:
+            queryset = queryset.filter(action_type=action_type)
+        # 支持按用户名模糊过滤
+        username = self.request.query_params.get('username', None)
+        if username:
+            queryset = queryset.filter(user__username__icontains=username)
         # 按时间倒序排序
         return queryset.order_by('-created_at')
 
