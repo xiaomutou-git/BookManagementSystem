@@ -1,0 +1,235 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图书管理系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <i class="fas fa-book-open"></i>
+                <h1>图书管理系统</h1>
+            </div>
+            <div class="navbar-nav">
+                <a href="/" class="nav-link active" data-page="home">首页</a>
+                <a href="/book-preview/" class="nav-link" data-page="book-preview">图书预览</a>
+            </div>
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="搜索图书...">
+                <button id="search-btn"><i class="fas fa-search"></i></button>
+            </div>
+            <!-- 用户登录/菜单区域 -->
+            <div class="user-menu-container">
+                <!-- 未登录状态显示登录按钮 -->
+                <div id="login-btn-container" class="user-menu-item">
+                    <a href="/login/" class="btn btn-primary login-btn">登录</a>
+                </div>
+                <!-- 已登录状态显示用户菜单 -->
+                <div id="user-dropdown-container" class="user-menu-item" style="display: none;">
+                    <div class="user-dropdown-trigger">
+                        <span id="current-username" class="username"></span>
+                        <i class="fas fa-caret-down"></i>
+                    </div>
+                    <div class="user-dropdown-menu">
+                        <a href="#" class="dropdown-item" id="edit-profile-btn">
+                            <i class="fas fa-user-edit"></i> 编辑个人信息
+                        </a>
+                        <a href="#" class="dropdown-item" id="settings-btn">
+                            <i class="fas fa-cog"></i> 设置
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item logout-btn" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+        <!-- 首页内容 -->
+        <section id="home" class="page active">
+            <div class="hero-section">
+                <div class="hero-content">
+                    <div class="hero-badge" id="hero-badge">图书管理系统</div>
+                    <h2 id="hero-title">欢迎使用图书管理系统</h2>
+                    <p id="hero-subtitle">高效管理您的图书资源，轻松实现图书的增删改查与在线借阅</p>
+                    <div class="hero-buttons" id="hero-buttons">
+                        <a href="/book-preview/" class="btn btn-primary">浏览图书</a>
+                        <a href="/login/" class="btn btn-secondary">登录</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-section">
+                <div class="container">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-book"></i></div>
+                        <div class="stat-content">
+                            <h3 id="total-books">0</h3>
+                            <p id="label-total-books">总图书数</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-cyan"><i class="fas fa-tags"></i></div>
+                        <div class="stat-content">
+                            <h3 id="total-categories">0</h3>
+                            <p id="label-total-categories">分类数</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-star"><i class="fas fa-star"></i></div>
+                        <div class="stat-content">
+                            <h3 id="avg-rating">0.0</h3>
+                            <p id="label-avg-rating">平均评分</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-borrow"><i class="fas fa-hand-holding-book"></i></div>
+                        <div class="stat-content">
+                            <h3 id="borrowed-now">0</h3>
+                            <p id="label-borrowed-now">借阅中</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-avail"><i class="fas fa-book-open"></i></div>
+                        <div class="stat-content">
+                            <h3 id="available-books">0</h3>
+                            <p id="label-available-books">可借册数</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon stat-icon-today"><i class="fas fa-calendar-plus"></i></div>
+                        <div class="stat-content">
+                            <h3 id="books-added-today">0</h3>
+                            <p id="label-books-added-today">今日新增</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 其他页面将通过JavaScript动态加载或导航到其他HTML文件 -->
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2023 图书管理系统. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript文件 -->
+    <script src="/js/data.js?v=9"></script>
+    <script src="/js/ui.js?v=9"></script>
+    <script src="/js/main.js?v=9"></script>
+    <script>
+        /**
+         * 页面加载完成后初始化首页身份化首屏
+         * 根据用户登录状态与角色动态更新 hero 标题、副标题与操作按钮，
+         * 游客引导登录/注册，普通用户引导进入用户中心，管理员引导进入后台管理
+         * @returns {void} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                initHeroByRole();
+            } catch (error) {
+                console.error('初始化首页身份化首屏失败:', error);
+            }
+        });
+
+        /**
+         * 按角色渲染首页 hero 首屏
+         * 复用 hero-badge、hero-title、hero-subtitle 与 hero-buttons 四个容器，
+         * 避免「欢迎文案 + 独立入口条」的信息重复，让不同身份用户第一眼看到专属引导
+         * @returns {void} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        function initHeroByRole() {
+            try {
+                const badgeEl = document.getElementById('hero-badge');
+                const titleEl = document.getElementById('hero-title');
+                const subtitleEl = document.getElementById('hero-subtitle');
+                const buttonsEl = document.getElementById('hero-buttons');
+                if (!titleEl || !subtitleEl || !buttonsEl) return;
+
+                // 解析当前登录用户
+                let userData = null;
+                try {
+                    const userJson = localStorage.getItem('user');
+                    const token = localStorage.getItem('token');
+                    if (userJson && token) {
+                        userData = JSON.parse(userJson);
+                    }
+                } catch (e) {
+                    console.warn('解析本地用户信息失败:', e);
+                }
+
+                // 游客：引导登录/注册与浏览
+                if (!userData) {
+                    badgeEl.textContent = '图书管理系统';
+                    titleEl.textContent = '探索图书馆';
+                    subtitleEl.textContent = '无需登录即可浏览图书资源，登录后可享受在线借阅、归还与评分评论等完整功能。';
+                    buttonsEl.innerHTML = `
+                        <a href="/login/" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt"></i> 立即登录
+                        </a>
+                        <a href="/login/" class="btn btn-secondary">
+                            <i class="fas fa-user-plus"></i> 注册账号
+                        </a>
+                        <a href="/book-preview/" class="btn btn-secondary">
+                            <i class="fas fa-book-open"></i> 浏览图书
+                        </a>
+                    `;
+                    return;
+                }
+
+                // 普通用户：引导进入用户中心
+                if (userData.user_type !== 'admin') {
+                    badgeEl.textContent = `欢迎回来，${escapeHtml(userData.username)}`;
+                    titleEl.textContent = '您的图书馆';
+                    subtitleEl.textContent = '借阅、归还、查看借阅记录与发表书评，都在这里为您准备。';
+                    buttonsEl.innerHTML = `
+                        <a href="/user-home/" class="btn btn-primary">
+                            <i class="fas fa-home"></i> 进入用户中心
+                        </a>
+                        <a href="/book-preview/" class="btn btn-secondary">
+                            <i class="fas fa-search"></i> 浏览图书
+                        </a>
+                        <a href="/user-borrow-records/" class="btn btn-secondary">
+                            <i class="fas fa-history"></i> 借阅记录
+                        </a>
+                    `;
+                    return;
+                }
+
+                // 管理员：引导进入后台管理
+                badgeEl.textContent = `管理员 ${escapeHtml(userData.username)} 您好`;
+                titleEl.textContent = '图书管理后台';
+                subtitleEl.textContent = '管理图书与分类，查看借阅记录与操作日志，掌控图书馆全貌。';
+                buttonsEl.innerHTML = `
+                    <a href="/books/" class="btn btn-primary">
+                        <i class="fas fa-book"></i> 图书管理
+                    </a>
+                    <a href="/add-book/" class="btn btn-secondary">
+                        <i class="fas fa-plus"></i> 添加图书
+                    </a>
+                    <a href="/categories/" class="btn btn-secondary">
+                        <i class="fas fa-tags"></i> 分类管理
+                    </a>
+                `;
+            } catch (error) {
+                console.error('渲染首页首屏失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>

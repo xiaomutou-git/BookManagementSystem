@@ -1,0 +1,362 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>借阅记录 - 图书管理系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <i class="fas fa-book-open"></i>
+                <h1>图书管理系统</h1>
+            </div>
+            <div class="navbar-nav">
+                <a href="/user-home/" class="nav-link" data-page="home">首页</a>
+                <a href="/user-dashboard/" class="nav-link" data-page="user-dashboard">用户中心</a>
+                <a href="/user-books/" class="nav-link" data-page="user-books">图书查询</a>
+                <a href="/user-borrow-records/" class="nav-link active" data-page="user-borrow-records">借阅记录</a>
+            </div>
+            <div class="user-menu-container">
+                <div id="user-dropdown-container" class="user-menu-item" style="display: none;">
+                    <div class="user-dropdown-trigger">
+                        <span id="current-username" class="username"></span>
+                        <i class="fas fa-caret-down"></i>
+                    </div>
+                    <div class="user-dropdown-menu">
+                        <a href="#" class="dropdown-item" id="edit-profile-btn">
+                            <i class="fas fa-user-edit"></i> 编辑个人信息
+                        </a>
+                        <a href="#" class="dropdown-item" id="settings-btn">
+                            <i class="fas fa-cog"></i> 设置
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item logout-btn" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+        <section id="user-borrow-records" class="page active">
+            <div class="container">
+                <div class="records-header">
+                    <h2>借阅记录</h2>
+                </div>
+
+                <!-- 过滤选项 -->
+                <div class="filter-container">
+                    <div class="filter-group">
+                        <label for="status-filter">状态:</label>
+                        <select id="status-filter">
+                            <option value="">全部状态</option>
+                            <option value="borrowed">已借阅</option>
+                            <option value="returned">已归还</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <button id="reset-filter" class="btn btn-primary">
+                            <i class="fas fa-redo"></i> 重置
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 借阅记录网格 -->
+                <div class="borrow-records-grid" id="borrow-records-grid">
+                    <!-- 借阅记录将通过JavaScript动态生成 -->
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2023 图书管理系统. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript文件 -->
+    <script src="/js/data.js?v=9"></script>
+    <script src="/js/ui.js?v=9"></script>
+    <script src="/js/main.js?v=9"></script>
+    <script>
+        /**
+         * 页面加载完成后初始化借阅记录页
+         * 检查登录状态，渲染借阅记录并绑定过滤、归还等事件
+         * @returns {void} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // 检查登录状态
+                let userData = null;
+                try {
+                    userData = JSON.parse(localStorage.getItem('user'));
+                } catch (parseError) {
+                    console.warn('解析用户信息失败:', parseError);
+                }
+                if (!userData) {
+                    // 未登录，跳转到登录页
+                    window.location.href = '/login/';
+                    return;
+                }
+
+                // 渲染借阅记录
+                await renderBorrowRecords();
+
+                // 设置事件监听器
+                setupEventListeners();
+            } catch (error) {
+                console.error('初始化失败:', error);
+                UI.showMessage('页面初始化失败，请刷新重试', 'error');
+            }
+        });
+
+        /**
+         * 格式化日期时间字符串
+         * 将 ISO 时间字符串转为本地可读格式
+         * @param {string} dateStr ISO 日期字符串
+         * @returns {string} 格式化后的日期文本；无效输入返回 '未知'
+         */
+        function formatDate(dateStr) {
+            try {
+                if (!dateStr) return '未知';
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return '未知';
+                return date.toLocaleString('zh-CN', {
+                    year: 'numeric', month: '2-digit', day: '2-digit',
+                    hour: '2-digit', minute: '2-digit'
+                });
+            } catch (e) {
+                return '未知';
+            }
+        }
+
+        /**
+         * 渲染借阅记录列表
+         * 从后端获取当前用户的借阅记录（支持按状态过滤），
+         * 展示应还日期与逾期状态，并绑定归还/再次借阅事件
+         * @param {string} [status=''] 状态过滤（borrowed/returned），空为全部
+         * @returns {Promise<void>} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        async function renderBorrowRecords(status = '') {
+            const recordsGrid = document.getElementById('borrow-records-grid');
+            if (!recordsGrid) return;
+
+            recordsGrid.innerHTML = `
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                </div>
+            `;
+
+            try {
+                // 通过数据模块获取借阅记录（内部处理分页解包）
+                const borrowRecords = await BorrowRecordData.getRecords(status);
+
+                if (borrowRecords.length === 0) {
+                    recordsGrid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-history"></i>
+                            <h3>暂无借阅记录</h3>
+                            <p>您还没有借阅任何图书，快去借阅一本吧！</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // 渲染借阅记录卡片（对用户可控字段做 HTML 转义，防止 XSS）
+                recordsGrid.innerHTML = borrowRecords.map(record => {
+                    const isBorrowed = record.status === 'borrowed';
+                    const isOverdue = isBorrowed && record.is_overdue;
+                    const statusText = isBorrowed
+                        ? (isOverdue ? '已逾期' : '已借阅')
+                        : '已归还';
+                    const statusClass = isOverdue ? 'overdue' : record.status;
+
+                    return `
+                        <div class="record-card">
+                            <div class="record-header">
+                                <h3 class="record-title">${escapeHtml(record.book && record.book.title)}</h3>
+                                <span class="record-status ${escapeHtml(statusClass)}">${escapeHtml(statusText)}</span>
+                            </div>
+
+                            <div class="record-content">
+                                ${record.book && record.book.cover_image
+                                    ? `<img src="${escapeHtml(record.book.cover_image)}" alt="${escapeHtml(record.book.title)}" class="record-image">`
+                                    : ''}
+
+                                <div class="record-meta">
+                                    <div class="record-meta-item">
+                                        <span class="record-meta-label">作者:</span>
+                                        <span class="record-meta-value">${escapeHtml(record.book && record.book.author)}</span>
+                                    </div>
+                                    <div class="record-meta-item">
+                                        <span class="record-meta-label">分类:</span>
+                                        <span class="record-meta-value">${escapeHtml(record.book && record.book.category && record.book.category.name)}</span>
+                                    </div>
+                                    <div class="record-meta-item">
+                                        <span class="record-meta-label">借阅日期:</span>
+                                        <span class="record-meta-value">${escapeHtml(formatDate(record.borrow_date))}</span>
+                                    </div>
+                                    ${isBorrowed ? `
+                                    <div class="record-meta-item">
+                                        <span class="record-meta-label">应还日期:</span>
+                                        <span class="record-meta-value">
+                                            <span class="record-due ${isOverdue ? 'overdue' : ''}">
+                                                ${escapeHtml(formatDate(record.due_date))}
+                                                ${isOverdue ? `<span class="overdue-badge">已逾期 ${escapeHtml(record.overdue_days || 0)} 天</span>` : ''}
+                                            </span>
+                                        </span>
+                                    </div>
+                                    ` : ''}
+                                    ${record.return_date ? `
+                                    <div class="record-meta-item">
+                                        <span class="record-meta-label">归还日期:</span>
+                                        <span class="record-meta-value">${escapeHtml(formatDate(record.return_date))}</span>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <div class="record-actions">
+                                ${isBorrowed ? `
+                                <button class="btn btn-success return-btn" data-id="${escapeHtml(record.id)}">
+                                    <i class="fas fa-check"></i> 归还图书
+                                </button>
+                                ` : `
+                                <button class="btn btn-primary borrow-again-btn" data-id="${escapeHtml(record.book && record.book.id)}">
+                                    <i class="fas fa-redo"></i> 再次借阅
+                                </button>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // 添加事件监听器
+                addRecordEventListeners();
+            } catch (error) {
+                console.error('渲染借阅记录失败:', error);
+                recordsGrid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h3>加载失败</h3>
+                        <p>${escapeHtml(error.message || '借阅记录加载失败，请刷新页面重试。')}</p>
+                    </div>
+                `;
+            }
+        }
+
+        /**
+         * 添加借阅记录卡片事件监听器
+         * 为归还按钮和再次借阅按钮绑定点击事件
+         * @returns {void} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        function addRecordEventListeners() {
+            try {
+                // 归还图书按钮事件
+                document.querySelectorAll('.return-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const recordId = e.target.closest('.btn').dataset.id;
+                        await returnBook(recordId);
+                    });
+                });
+
+                // 再次借阅按钮事件
+                document.querySelectorAll('.borrow-again-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const bookId = e.target.closest('.btn').dataset.id;
+                        await borrowBookAgain(bookId);
+                    });
+                });
+            } catch (error) {
+                console.error('添加记录事件监听器失败:', error);
+            }
+        }
+
+        /**
+         * 归还图书
+         * 调用归还接口，成功后刷新借阅记录列表并提示用户
+         * @param {number|string} recordId 借阅记录ID
+         * @returns {Promise<void>} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        async function returnBook(recordId) {
+            try {
+                if (!confirm('确定要归还这本图书吗？')) return;
+                await BorrowRecordData.returnBook(recordId);
+                UI.showMessage('图书归还成功！', 'success');
+                // 重新渲染借阅记录（保持当前过滤状态）
+                const statusFilter = document.getElementById('status-filter');
+                await renderBorrowRecords(statusFilter ? statusFilter.value : '');
+            } catch (error) {
+                console.error('归还图书失败:', error);
+                UI.showMessage(error.message || '归还图书失败，请稍后重试。', 'error');
+            }
+        }
+
+        /**
+         * 再次借阅图书
+         * 调用借阅接口，成功后刷新借阅记录列表并提示用户
+         * @param {number|string} bookId 图书ID
+         * @returns {Promise<void>} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        async function borrowBookAgain(bookId) {
+            try {
+                await BorrowRecordData.borrow(bookId);
+                UI.showMessage('图书借阅成功！', 'success');
+                // 重新渲染借阅记录
+                const statusFilter = document.getElementById('status-filter');
+                await renderBorrowRecords(statusFilter ? statusFilter.value : '');
+            } catch (error) {
+                console.error('再次借阅图书失败:', error);
+                UI.showMessage(error.message || '借阅图书失败，请稍后重试。', 'error');
+            }
+        }
+
+        /**
+         * 设置页面事件监听器
+         * 绑定状态过滤变化和重置过滤器事件
+         * @returns {void} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        function setupEventListeners() {
+            try {
+                // 状态过滤变化事件
+                const statusFilter = document.getElementById('status-filter');
+                if (statusFilter) {
+                    statusFilter.addEventListener('change', async () => {
+                        await renderBorrowRecords(statusFilter.value);
+                    });
+                }
+
+                // 重置过滤器事件
+                const resetFilter = document.getElementById('reset-filter');
+                if (resetFilter) {
+                    resetFilter.addEventListener('click', async () => {
+                        if (statusFilter) statusFilter.value = '';
+                        await renderBorrowRecords();
+                    });
+                }
+            } catch (error) {
+                console.error('设置事件监听器失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,478 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图书预览 - 图书管理系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* 响应式布局 */
+        @media (max-width: 768px) {
+            .filter-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            .books-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
+        
+        /* 页面标题 */
+        .books-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+        
+        /* 过滤容器 */
+        .filter-container {
+            display: flex;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .filter-group label {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .filter-group select,
+        .filter-group input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+        
+        /* 图书网格 */
+        .books-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        /* 图书卡片 */
+        .book-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .book-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+        
+        .book-card-image {
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f8f9fa;
+            overflow: hidden;
+        }
+        
+        .book-card-image img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+        }
+        
+        .book-card-image i {
+            font-size: 4rem;
+            color: #dee2e6;
+        }
+        
+        .book-card-content {
+            padding: 1.5rem;
+        }
+        
+        .book-card-title {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .book-card-author {
+            margin: 0 0 1rem 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .book-card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        
+        .book-card-category {
+            background-color: #e9ecef;
+            color: #495057;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .book-card-rating {
+            display: flex;
+            align-items: center;
+            color: #ffc107;
+            font-weight: 500;
+        }
+        
+        .book-card-rating i {
+            margin-right: 0.25rem;
+        }
+        
+        .book-card-description {
+            margin-bottom: 1rem;
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+        
+        .book-card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 0.5rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        
+        /* 登录提示 */
+        .login-prompt {
+            background: #fff3cd;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: center;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .login-prompt a {
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .login-prompt a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <i class="fas fa-book-open"></i>
+                <h1>图书管理系统</h1>
+            </div>
+            <div class="navbar-nav">
+                <a href="/" class="nav-link" data-page="home">首页</a>
+                <a href="/book-preview/" class="nav-link active" data-page="book-preview">图书预览</a>
+            </div>
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="搜索图书...">
+                <button id="search-btn"><i class="fas fa-search"></i></button>
+            </div>
+            <!-- 用户登录/菜单区域 -->
+            <div class="user-menu-container">
+                <!-- 未登录状态显示登录按钮 -->
+                <div id="login-btn-container" class="user-menu-item">
+                    <a href="/login/" class="btn btn-primary login-btn">登录</a>
+                </div>
+                <!-- 已登录状态显示用户菜单 -->
+                <div id="user-dropdown-container" class="user-menu-item" style="display: none;">
+                    <div class="user-dropdown-trigger">
+                        <span id="current-username" class="username"></span>
+                        <i class="fas fa-caret-down"></i>
+                    </div>
+                    <div class="user-dropdown-menu">
+                        <a href="#" class="dropdown-item" id="edit-profile-btn">
+                            <i class="fas fa-user-edit"></i> 编辑个人信息
+                        </a>
+                        <a href="#" class="dropdown-item" id="settings-btn">
+                            <i class="fas fa-cog"></i> 设置
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item logout-btn" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+        <section id="book-preview" class="page active">
+            <div class="container">
+                <!-- 登录提示 -->
+                <div class="login-prompt" id="login-prompt">
+                    <p>登录后可以借阅图书，查看借阅记录 <a href="/login/">立即登录</a></p>
+                </div>
+
+                <!-- 页面标题 -->
+                <div class="books-header">
+                    <h2>图书预览</h2>
+                </div>
+
+                <!-- 过滤和搜索 -->
+                <div class="filter-container">
+                    <div class="filter-group">
+                        <label for="category-filter">分类:</label>
+                        <select id="category-filter">
+                            <option value="">全部分类</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="rating-filter">最低评分:</label>
+                        <select id="rating-filter">
+                            <option value="0">全部评分</option>
+                            <option value="4.5">4.5+</option>
+                            <option value="4.0">4.0+</option>
+                            <option value="3.5">3.5+</option>
+                            <option value="3.0">3.0+</option>
+                        </select>
+                    </div>
+                    <button id="reset-filter" class="btn btn-outline">
+                        <i class="fas fa-redo"></i> 重置过滤器
+                    </button>
+                </div>
+
+                <!-- 图书网格 -->
+                <div class="books-grid" id="books-grid">
+                    <!-- 图书卡片将通过JavaScript动态生成 -->
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2023 图书管理系统. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript文件 -->
+    <script src="/js/data.js?v=9"></script>
+    <script src="/js/ui.js?v=9"></script>
+    <script src="/js/main.js?v=9"></script>
+    <script>
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // 检查登录状态，隐藏登录提示
+                const userData = JSON.parse(localStorage.getItem('user'));
+                if (userData) {
+                    document.getElementById('login-prompt').style.display = 'none';
+                }
+                
+                // 加载分类选项
+                await loadCategories();
+                
+                // 加载图书列表
+                await loadBooks();
+                
+                // 设置搜索和过滤事件监听器
+                setupEventListeners();
+            } catch (error) {
+                console.error('初始化失败:', error);
+            }
+        });
+        
+        // 加载分类选项
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/categories/');
+                if (response.ok) {
+                    const categories = await response.json();
+                    const categoryFilter = document.getElementById('category-filter');
+                    
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.id;
+                        option.textContent = category.name;
+                        categoryFilter.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('加载分类失败:', error);
+            }
+        }
+        
+        // 加载图书列表
+        async function loadBooks(searchQuery = '', category = '', minRating = 0) {
+            try {
+                let url = '/api/books/?';
+                const params = new URLSearchParams();
+                
+                if (searchQuery) params.append('q', searchQuery);
+                if (category) params.append('category', category);
+                if (minRating > 0) params.append('min_rating', minRating);
+                
+                const response = await fetch(`${url}${params.toString()}`);
+                if (response.ok) {
+                    const books = await response.json();
+                    renderBooks(books);
+                }
+            } catch (error) {
+                console.error('加载图书失败:', error);
+            }
+        }
+        
+        // 渲染图书列表
+        function renderBooks(books) {
+            const booksGrid = document.getElementById('books-grid');
+            
+            if (books.length === 0) {
+                booksGrid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-book"></i>
+                        <h3>暂无图书</h3>
+                        <p>系统中还没有图书，敬请期待！</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 渲染图书卡片，只显示查看功能，不显示编辑和删除功能
+            booksGrid.innerHTML = books.map(book => `
+                <div class="book-card">
+                    <div class="book-card-image">
+                        ${book.cover_image ? `<img src="${book.cover_image}" alt="${book.title}">` : '<i class="fas fa-book"></i>'}
+                    </div>
+                    <div class="book-card-content">
+                        <h3 class="book-card-title">${book.title}</h3>
+                        <p class="book-card-author">${book.author}</p>
+                        <div class="book-card-meta">
+                            <span class="book-card-category">${book.category.name}</span>
+                            <div class="book-card-rating">
+                                <i class="fas fa-star"></i>
+                                <span>${book.rating}</span>
+                            </div>
+                        </div>
+                        <p class="book-card-description">${book.description}</p>
+                        <div class="book-card-actions">
+                            <button class="btn btn-primary" onclick="viewBook(${book.id})">
+                                <i class="fas fa-eye"></i> 查看详情
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 查看图书详情
+        function viewBook(bookId) {
+            try {
+                if (!bookId) {
+                    console.warn('viewBook: 缺少图书ID');
+                    return;
+                }
+                // 跳转到图书详情页
+                window.location.href = `/book-detail/${encodeURIComponent(bookId)}/`;
+            } catch (error) {
+                console.error('跳转图书详情页失败:', error);
+            }
+        }
+        
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 搜索按钮事件
+            document.getElementById('search-btn').addEventListener('click', () => {
+                const searchQuery = document.getElementById('search-input').value;
+                const category = document.getElementById('category-filter').value;
+                const minRating = document.getElementById('rating-filter').value;
+                loadBooks(searchQuery, category, minRating);
+            });
+            
+            // 搜索输入框回车事件
+            document.getElementById('search-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const searchQuery = e.target.value;
+                    const category = document.getElementById('category-filter').value;
+                    const minRating = document.getElementById('rating-filter').value;
+                    loadBooks(searchQuery, category, minRating);
+                }
+            });
+            
+            // 分类过滤事件
+            document.getElementById('category-filter').addEventListener('change', (e) => {
+                const searchQuery = document.getElementById('search-input').value;
+                const category = e.target.value;
+                const minRating = document.getElementById('rating-filter').value;
+                loadBooks(searchQuery, category, minRating);
+            });
+            
+            // 评分过滤事件
+            document.getElementById('rating-filter').addEventListener('change', (e) => {
+                const searchQuery = document.getElementById('search-input').value;
+                const category = document.getElementById('category-filter').value;
+                const minRating = e.target.value;
+                loadBooks(searchQuery, category, minRating);
+            });
+            
+            // 重置过滤器事件
+            document.getElementById('reset-filter').addEventListener('click', () => {
+                document.getElementById('search-input').value = '';
+                document.getElementById('category-filter').value = '';
+                document.getElementById('rating-filter').value = '0';
+                loadBooks();
+            });
+        }
+    </script>
+</body>
+</html>

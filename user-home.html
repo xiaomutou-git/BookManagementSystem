@@ -1,0 +1,256 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户首页 - 图书管理系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <i class="fas fa-book-open"></i>
+                <h1>图书管理系统</h1>
+            </div>
+            <div class="navbar-nav">
+                <a href="/user-home/" class="nav-link active" data-page="home">首页</a>
+                <a href="/user-dashboard/" class="nav-link" data-page="user-dashboard">用户中心</a>
+                <a href="/user-books/" class="nav-link" data-page="user-books">图书查询</a>
+                <a href="/user-borrow-records/" class="nav-link" data-page="user-borrow-records">借阅记录</a>
+            </div>
+            <div class="user-menu-container">
+                <div id="user-dropdown-container" class="user-menu-item" style="display: none;">
+                    <div class="user-dropdown-trigger">
+                        <span id="current-username" class="username"></span>
+                        <i class="fas fa-caret-down"></i>
+                    </div>
+                    <div class="user-dropdown-menu">
+                        <a href="#" class="dropdown-item" id="edit-profile-btn">
+                            <i class="fas fa-user-edit"></i> 编辑个人信息
+                        </a>
+                        <a href="#" class="dropdown-item" id="settings-btn">
+                            <i class="fas fa-cog"></i> 设置
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item logout-btn" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+        <!-- 欢迎横幅 -->
+        <section class="welcome-banner">
+            <div class="welcome-content">
+                <h2 id="welcome-message">欢迎使用图书管理系统</h2>
+                <p>探索我们的图书资源，轻松借阅您喜欢的图书</p>
+            </div>
+        </section>
+
+        <!-- 内容容器 -->
+        <div class="container">
+            <!-- 统计卡片 -->
+            <div class="user-stats-grid">
+                <div class="user-stat-card">
+                    <div class="user-stat-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="user-stat-value" id="total-books">0</div>
+                    <div class="user-stat-label">总图书数</div>
+                </div>
+                <div class="user-stat-card">
+                    <div class="user-stat-icon">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <div class="user-stat-value" id="currently-borrowed">0</div>
+                    <div class="user-stat-label">当前借阅</div>
+                </div>
+                <div class="user-stat-card">
+                    <div class="user-stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="user-stat-value" id="total-returned">0</div>
+                    <div class="user-stat-label">已归还</div>
+                </div>
+            </div>
+
+            <!-- 快速操作 -->
+            <div class="quick-actions">
+                <div class="action-card" onclick="window.location.href='/user-books/'">
+                    <i class="fas fa-search"></i>
+                    <h3>图书查询</h3>
+                    <p>搜索和浏览所有可借阅图书</p>
+                </div>
+                <div class="action-card" onclick="window.location.href='/user-borrow-records/'">
+                    <i class="fas fa-history"></i>
+                    <h3>借阅记录</h3>
+                    <p>查看所有借阅和归还记录</p>
+                </div>
+                <div class="action-card" onclick="window.location.href='/user-dashboard/'">
+                    <i class="fas fa-user"></i>
+                    <h3>用户中心</h3>
+                    <p>管理您的个人信息和借阅统计</p>
+                </div>
+            </div>
+
+            <!-- 推荐图书 -->
+            <div class="recommended-books">
+                <h3 class="section-title">推荐图书</h3>
+                <div class="books-grid" id="recommended-books">
+                    <!-- 推荐图书将通过JavaScript动态生成 -->
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2023 图书管理系统. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript文件 -->
+    <script src="/js/data.js?v=9"></script>
+    <script src="/js/ui.js?v=9"></script>
+    <script src="/js/main.js?v=9"></script>
+    <script>
+        /**
+         * 页面加载完成后初始化用户首页
+         * 获取用户信息、统计数据和推荐图书，更新页面内容
+         * @returns {void} 无返回值
+         * @throws {Error} 初始化失败时打印错误日志
+         */
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                let userData = null;
+                try {
+                    userData = JSON.parse(localStorage.getItem('user'));
+                } catch (parseError) {
+                    console.warn('解析用户信息失败:', parseError);
+                }
+                if (!userData) {
+                    window.location.href = '/login/';
+                    return;
+                }
+
+                document.getElementById('welcome-message').textContent = `欢迎回来，${userData.username}！`;
+
+                await loadStats();
+                await loadRecommendedBooks();
+            } catch (error) {
+                console.error('初始化失败:', error);
+            }
+        });
+
+        /**
+         * 加载统计数据
+         * 获取图书总数和借阅记录统计，更新页面显示
+         * @returns {void} 无返回值
+         * @throws {Error} 加载失败时打印错误日志
+         */
+        async function loadStats() {
+            try {
+                // 获取图书总数（图书接口不启用分页，直接返回数组）
+                try {
+                    const books = await BookData.getAllBooks();
+                    document.getElementById('total-books').textContent = Array.isArray(books) ? books.length : 0;
+                } catch (e) {
+                    console.warn('获取图书总数失败:', e);
+                }
+
+                // 通过数据模块获取借阅记录（内部处理分页解包）
+                const borrowRecords = await BorrowRecordData.getRecords();
+                const currentlyBorrowed = borrowRecords.filter(r => r.status === 'borrowed').length;
+                const totalReturned = borrowRecords.filter(r => r.status === 'returned').length;
+
+                document.getElementById('currently-borrowed').textContent = currentlyBorrowed;
+                document.getElementById('total-returned').textContent = totalReturned;
+            } catch (error) {
+                console.error('加载统计数据失败:', error);
+            }
+        }
+
+        /**
+         * 加载推荐图书
+         * 获取推荐图书列表，渲染到页面中（对用户可控字段做 HTML 转义，防止 XSS）
+         * @returns {void} 无返回值
+         * @throws {Error} 加载失败时打印错误日志
+         */
+        async function loadRecommendedBooks() {
+            try {
+                const books = await BookData.getAllBooks();
+                let bookList = Array.isArray(books) ? books.slice(0, 6) : [];
+
+                // 按默认排序展示
+                bookList = UI.sortBooks(bookList, getDefaultBookSort());
+
+                const booksGrid = document.getElementById('recommended-books');
+                if (!booksGrid) return;
+
+                if (bookList.length === 0) {
+                    booksGrid.innerHTML = `
+                        <div class="no-results">
+                            <i class="fas fa-book"></i>
+                            <h3>暂无推荐图书</h3>
+                            <p>系统中还没有图书，敬请期待！</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                booksGrid.innerHTML = bookList.map(book => {
+                    const availableCopies = Number(book.available_copies) || 0;
+                    return `
+                        <div class="book-card">
+                            <div class="book-card-image">
+                                ${book.cover_image ? `<img src="${escapeHtml(book.cover_image)}" alt="${escapeHtml(book.title)}">` : '<i class="fas fa-book"></i>'}
+                            </div>
+                            <div class="book-card-content">
+                                <h3 class="book-card-title">${escapeHtml(book.title)}</h3>
+                                <p class="book-card-author">${escapeHtml(book.author)}</p>
+                                <div class="book-card-meta">
+                                    <span class="book-card-category">${escapeHtml(book.category && book.category.name)}</span>
+                                    <div class="book-card-rating">
+                                        <i class="fas fa-star"></i>
+                                        <span>${escapeHtml(Number(book.rating).toFixed(1))}</span>
+                                    </div>
+                                </div>
+                                <div class="book-card-stock">
+                                    ${availableCopies > 0
+                                        ? `<span class="stock-available">可借 ${escapeHtml(availableCopies)} 本</span>`
+                                        : '<span class="stock-empty">暂时无库存</span>'}
+                                </div>
+                                <div class="book-card-actions">
+                                    <button class="btn btn-primary" data-id="${escapeHtml(book.id)}">
+                                        <i class="fas fa-eye"></i> 查看详情
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // 绑定查看详情事件
+                booksGrid.querySelectorAll('.book-card .btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        window.location.href = `/book-detail/${btn.dataset.id}/`;
+                    });
+                });
+            } catch (error) {
+                console.error('加载推荐图书失败:', error);
+            }
+        }
+    </script>
+</body>
+</html>

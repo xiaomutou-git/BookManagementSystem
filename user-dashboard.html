@@ -1,0 +1,241 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户中心 - 图书管理系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-brand">
+                <i class="fas fa-book-open"></i>
+                <h1>图书管理系统</h1>
+            </div>
+            <div class="navbar-nav">
+                <a href="/user-home/" class="nav-link" data-page="home">首页</a>
+                <a href="/user-dashboard/" class="nav-link active" data-page="user-dashboard">用户中心</a>
+                <a href="/user-books/" class="nav-link" data-page="user-books">图书查询</a>
+                <a href="/user-borrow-records/" class="nav-link" data-page="user-borrow-records">借阅记录</a>
+            </div>
+            <div class="user-menu-container">
+                <div id="user-dropdown-container" class="user-menu-item" style="display: none;">
+                    <div class="user-dropdown-trigger">
+                        <span id="current-username" class="username"></span>
+                        <i class="fas fa-caret-down"></i>
+                    </div>
+                    <div class="user-dropdown-menu">
+                        <a href="#" class="dropdown-item" id="edit-profile-btn">
+                            <i class="fas fa-user-edit"></i> 编辑个人信息
+                        </a>
+                        <a href="#" class="dropdown-item" id="settings-btn">
+                            <i class="fas fa-cog"></i> 设置
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item logout-btn" id="logout-btn">
+                            <i class="fas fa-sign-out-alt"></i> 退出登录
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+        <section id="user-dashboard" class="page active">
+            <div class="container">
+                <!-- 用户信息卡片 -->
+                <div class="user-info-card">
+                    <div class="user-info-header">
+                        <div class="user-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="user-details">
+                            <h2 id="user-name">用户名</h2>
+                            <p id="user-email">邮箱地址</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 统计卡片 -->
+                <div class="user-stats-grid">
+                    <div class="user-stat-card">
+                        <div class="user-stat-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div class="user-stat-value" id="total-borrowed">0</div>
+                        <div class="user-stat-label">累计借阅</div>
+                    </div>
+                    <div class="user-stat-card">
+                        <div class="user-stat-icon">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <div class="user-stat-value" id="currently-borrowed">0</div>
+                        <div class="user-stat-label">当前借阅</div>
+                    </div>
+                    <div class="user-stat-card">
+                        <div class="user-stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="user-stat-value" id="total-returned">0</div>
+                        <div class="user-stat-label">已归还</div>
+                    </div>
+                </div>
+
+                <!-- 快速操作 -->
+                <div class="quick-actions">
+                    <div class="action-card" onclick="window.location.href='/user-books/'">
+                        <i class="fas fa-search"></i>
+                        <h3>图书查询</h3>
+                        <p>搜索和浏览所有可借阅图书</p>
+                    </div>
+                    <div class="action-card" onclick="window.location.href='/user-borrow-records/'">
+                        <i class="fas fa-history"></i>
+                        <h3>借阅记录</h3>
+                        <p>查看所有借阅和归还记录</p>
+                    </div>
+                </div>
+
+                <!-- 最近借阅记录 -->
+                <div class="recent-borrows">
+                    <h3 class="section-title">最近借阅记录</h3>
+                    <ul class="borrow-list" id="recent-borrows-list">
+                        <!-- 最近借阅记录将通过JavaScript动态生成 -->
+                        <li class="borrow-item">
+                            <div class="borrow-item-header">
+                                <h4 class="borrow-item-title">暂无借阅记录</h4>
+                            </div>
+                            <div class="borrow-item-meta">
+                                <p>您还没有借阅任何图书</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2023 图书管理系统. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript文件 -->
+    <script src="/js/data.js?v=9"></script>
+    <script src="/js/ui.js?v=9"></script>
+    <script src="/js/main.js?v=9"></script>
+    <script>
+        /**
+         * 页面加载完成后初始化用户中心
+         * 获取用户信息与借阅统计，渲染最近借阅记录
+         * @returns {void} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                let userData = null;
+                try {
+                    userData = JSON.parse(localStorage.getItem('user'));
+                } catch (parseError) {
+                    console.warn('解析用户信息失败:', parseError);
+                }
+                if (!userData) {
+                    window.location.href = '/login/';
+                    return;
+                }
+
+                document.getElementById('user-name').textContent = userData.username;
+                document.getElementById('user-email').textContent = userData.email || '未设置邮箱';
+
+                await loadDashboardData();
+            } catch (error) {
+                console.error('初始化失败:', error);
+                UI.showMessage('页面初始化失败，请刷新重试', 'error');
+            }
+        });
+
+        /**
+         * 加载用户中心数据
+         * 通过数据模块获取借阅记录，计算统计信息并渲染最近借阅列表
+         * @returns {Promise<void>} 无返回值
+         * @throws {Error} 不会抛出异常，内部已捕获所有可预见错误
+         */
+        async function loadDashboardData() {
+            try {
+                // 通过数据模块获取借阅记录（内部处理分页解包）
+                const borrowRecords = await BorrowRecordData.getRecords();
+
+                // 计算统计信息
+                const totalBorrowed = borrowRecords.length;
+                const currentlyBorrowed = borrowRecords.filter(r => r.status === 'borrowed').length;
+                const totalReturned = borrowRecords.filter(r => r.status === 'returned').length;
+                const overdueCount = borrowRecords.filter(r => r.status === 'borrowed' && r.is_overdue).length;
+
+                document.getElementById('total-borrowed').textContent = totalBorrowed;
+                document.getElementById('currently-borrowed').textContent = currentlyBorrowed;
+                document.getElementById('total-returned').textContent = totalReturned;
+
+                // 最近借阅记录（最多5条，按时间倒序）
+                const recentBorrows = borrowRecords.slice(0, 5);
+                const borrowList = document.getElementById('recent-borrows-list');
+                if (!borrowList) return;
+
+                if (recentBorrows.length === 0) {
+                    borrowList.innerHTML = `
+                        <li class="borrow-item">
+                            <div class="borrow-item-header">
+                                <h4 class="borrow-item-title">暂无借阅记录</h4>
+                            </div>
+                            <div class="borrow-item-meta">
+                                <p>您还没有借阅任何图书</p>
+                            </div>
+                        </li>
+                    `;
+                    return;
+                }
+
+                // 渲染最近借阅记录（对用户可控字段做 HTML 转义，防止 XSS）
+                borrowList.innerHTML = recentBorrows.map(record => {
+                    const isBorrowed = record.status === 'borrowed';
+                    const isOverdue = isBorrowed && record.is_overdue;
+                    const statusText = isBorrowed
+                        ? (isOverdue ? '已逾期' : '已借阅')
+                        : '已归还';
+                    const statusClass = isOverdue ? 'overdue' : record.status;
+
+                    let dueHtml = '';
+                    if (isBorrowed && record.due_date) {
+                        dueHtml = `<p class="borrow-item-due ${isOverdue ? 'overdue' : ''}">
+                            应还日期: ${escapeHtml(new Date(record.due_date).toLocaleDateString())}
+                            ${isOverdue ? `（已逾期 ${escapeHtml(record.overdue_days || 0)} 天）` : ''}
+                        </p>`;
+                    }
+
+                    return `
+                        <li class="borrow-item">
+                            <div class="borrow-item-header">
+                                <h4 class="borrow-item-title">${escapeHtml(record.book && record.book.title)}</h4>
+                                <span class="borrow-item-status ${escapeHtml(statusClass)}">${escapeHtml(statusText)}</span>
+                            </div>
+                            <div class="borrow-item-meta">
+                                <p>作者: ${escapeHtml(record.book && record.book.author)} | 借阅日期: ${escapeHtml(new Date(record.borrow_date).toLocaleDateString())}</p>
+                                ${dueHtml}
+                                ${record.return_date ? `<p>归还日期: ${escapeHtml(new Date(record.return_date).toLocaleDateString())}</p>` : ''}
+                            </div>
+                        </li>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('加载用户中心数据失败:', error);
+                UI.showMessage('加载数据失败，请刷新重试', 'error');
+            }
+        }
+    </script>
+</body>
+</html>
