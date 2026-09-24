@@ -1,46 +1,74 @@
+<div align="center">
+
 # Django 图书管理系统
 
-一个基于 **Django + Django REST Framework + SQLite** 的完整图书管理系统，支持图书 / 分类管理、在线借阅归还、库存控制、书评评分、按角色（游客 / 普通用户 / 管理员）的动态界面，以及登录防暴力破解、权限控制等安全能力。
+基于 Django + Django REST Framework + SQLite 的完整图书管理系统
 
----
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Django](https://img.shields.io/badge/Django-4.2-092E20?logo=django&logoColor=white)
+![DRF](https://img.shields.io/badge/DRF-3.16-A30000?logo=djangorestframework&logoColor=white)
+![Database](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
+
+支持图书 / 分类管理、在线借阅归还、库存控制、书评评分，按角色（游客 / 普通用户 / 管理员）动态展示界面，内置登录防暴力破解与权限控制等安全能力。
+
+</div>
+
+## 目录
+
+- [功能特性](#功能特性)
+- [技术栈](#技术栈)
+- [目录结构](#目录结构)
+- [快速开始](#快速开始)
+- [环境变量配置](#环境变量配置)
+- [API 一览](#api-一览)
+- [自动化测试](#自动化测试)
+- [使用说明](#使用说明)
+- [开源说明](#开源说明)
 
 ## 功能特性
 
 ### 图书与分类
-- 图书增删改查、按书名 / 作者 / ISBN / 简介模糊搜索
+
+- 图书增删改查，支持按书名 / 作者 / ISBN / 简介模糊搜索
 - 按分类、最低评分过滤
 - **库存管理**：每本书记录总册数与可借册数，借阅自动扣减、归还自动回补，防止超卖
 - 分类内展示图书数量
 
 ### 借阅与归还
+
 - 在线借阅 / 归还图书，自动生成应还日期（默认 30 天）
 - **逾期检测**：展示应还日期、逾期天数与逾期状态
 - 同一本书未归还时禁止重复借阅；库存不足时禁止借阅
 - 使用数据库行锁 + 事务保证并发下库存一致
 
 ### 书评与评分
+
 - 登录用户可对图书评分（0 ~ 5）并发表评论
 - 每位用户对同一本书仅保留一条评论（重复提交自动更新）
 - 图书详情页展示平均评分与评论列表
 
 ### 角色化界面与权限
-- **游客**：浏览图书、搜索、查看详情
-- **普通用户**：借阅 / 归还、查看借阅记录、评分评论、用户中心
-- **管理员**：图书与分类管理、查看借阅记录、操作日志
-- 前端导航按角色动态生成；后端对未授权操作返回 401 / 403
+
+| 角色 | 能力 |
+| --- | --- |
+| 游客 | 浏览图书、搜索、查看详情 |
+| 普通用户 | 借阅 / 归还、查看借阅记录、评分评论、用户中心 |
+| 管理员 | 图书与分类管理、查看全部借阅记录、操作日志 |
+
+前端导航按角色动态生成；后端对未授权操作返回 401 / 403。
 
 ### 操作日志
-- 完整记录系统内所有用户的关键操作：登录 / 登出、借阅 / 归还、图书与分类的增删改、书评的提交与删除
+
+- 完整记录所有用户的关键操作：登录 / 登出、借阅 / 归还、图书与分类的增删改、书评的提交与删除
 - 每条日志包含：操作用户、操作类型、对象说明、发生时间
 - 管理员可查看全部日志，并支持按**操作类型**、**用户**筛选
 
 ### 安全加固
+
 - 登录防暴力破解：单 IP 连续失败锁定，基于**共享缓存**实现（支持多进程 / Redis）
 - 密码强度校验；所有用户可控字段在前端均做 **XSS 转义**
-- 管理员密码通过环境变量注入，不硬编码；SECRET_KEY / DEBUG / CORS 均由环境变量配置
+- 管理员密码通过环境变量注入，不硬编码；`SECRET_KEY` / `DEBUG` / CORS 均由环境变量配置
 - 越权防护：普通用户不可自我提权为管理员，不可访问他人数据
-
----
 
 ## 技术栈
 
@@ -52,17 +80,15 @@
 | 跨域 | django-cors-headers |
 | 前端 | 原生 HTML + CSS + JavaScript（无构建工具，服务端直接渲染） |
 
----
-
 ## 目录结构
 
-```
-Django图书管理系统/
+```text
+BookManagementSystem/
 ├── manage.py                 # Django 管理入口
 ├── requirements.txt          # 依赖清单
 ├── .gitignore                # Git 忽略规则
 ├── library/                  # 核心应用
-│   ├── models.py             # 数据模型：Category/Book/UserProfile/BorrowRecord/BookReview/ActionLog
+│   ├── models.py             # 数据模型：Category / Book / UserProfile / BorrowRecord / BookReview / ActionLog
 │   ├── views.py              # 视图与 API 逻辑（含登录限流、权限类）
 │   ├── serializers.py        # 序列化器
 │   ├── urls.py               # API 路由
@@ -73,29 +99,32 @@ Django图书管理系统/
 ├── library_system/           # 项目配置
 │   ├── settings.py           # 全局配置（缓存、CORS、REST 框架等）
 │   ├── urls.py               # 页面与静态资源路由
-│   ├── asgi.py / wsgi.py     # 部署入口
-├── css/style.css             # 全局样式（清新科技蓝）
+│   └── asgi.py / wsgi.py     # 部署入口
+├── css/style.css             # 全局样式（科技蓝）
 ├── js/
 │   ├── data.js               # 数据请求模块（统一 API 封装）
 │   ├── ui.js                 # 页面渲染与交互
 │   └── main.js               # 页面初始化、导航、访问控制
-└── *.html                    # 前端页面（首页/图书预览/图书管理/借阅记录等）
+└── *.html                    # 前端页面（首页 / 图书预览 / 图书管理 / 借阅记录等）
 ```
-
----
 
 ## 快速开始
 
 ### 1. 环境要求
+
 - Python 3.10+
 - pip
 
-### 2. 安装依赖
+### 2. 克隆仓库并安装依赖
+
 ```bash
+git clone https://github.com/xiaomutou-git/BookManagementSystem.git
+cd BookManagementSystem
 pip install -r requirements.txt
 ```
 
 ### 3. 数据库迁移与缓存表
+
 ```bash
 python manage.py makemigrations
 python manage.py migrate
@@ -103,6 +132,7 @@ python manage.py createcachetable
 ```
 
 ### 4. 初始化管理员账号（可选）
+
 ```bash
 # 方式一：通过环境变量指定账号密码（推荐）
 export ADMIN_USERNAME=admin
@@ -113,14 +143,15 @@ python manage.py initadmin
 python manage.py initadmin
 ```
 
+> Windows PowerShell 设置环境变量请使用 `$env:ADMIN_USERNAME="admin"`。
+
 ### 5. 启动服务
+
 ```bash
 python manage.py runserver
 ```
 
-访问 http://127.0.0.1:8000/ ，用管理员账号登录即可进入系统。
-
----
+访问 <http://127.0.0.1:8000/>，用管理员账号登录即可进入系统。
 
 ## 环境变量配置
 
@@ -136,9 +167,7 @@ python manage.py runserver
 | `DJANGO_CACHE_BACKEND` | 缓存后端（`db` / `redis`） | `db` |
 | `DJANGO_REDIS_URL` | 使用 Redis 时的连接地址 | `redis://127.0.0.1:6379/1` |
 
-> 生产部署建议：`DJANGO_DEBUG=False`、使用强 `DJANGO_SECRET_KEY`、配置 `DJANGO_ALLOWED_HOSTS` 与 `CORS_ALLOWED_ORIGINS`，并可按需开启 **Redis** 缓存以提升限流并发能力。
-
----
+> **生产部署建议**：设置 `DJANGO_DEBUG=False`、使用强 `DJANGO_SECRET_KEY`、配置 `DJANGO_ALLOWED_HOSTS` 与 `CORS_ALLOWED_ORIGINS`，并可按需开启 **Redis** 缓存以提升限流并发能力。
 
 ## API 一览
 
@@ -149,15 +178,13 @@ python manage.py runserver
 | POST | `/api/register/` | 注册 | 公开 |
 | GET | `/api/current-user/` | 获取当前用户信息 | 登录 |
 | GET | `/api/stats/` | 首页统计数据 | 公开 |
-| GET/POST | `/api/books/` | 图书列表 / 创建 | 读公开，写管理员 |
-| GET/PUT/DELETE | `/api/books/{id}/` | 图书详情 / 更新 / 删除 | 读公开，写管理员 |
-| GET/POST | `/api/categories/` | 分类列表 / 创建 | 读公开，写管理员 |
-| GET/POST | `/api/borrow-records/` | 借阅记录（借阅） | 登录（仅本人） |
+| GET / POST | `/api/books/` | 图书列表 / 创建 | 读公开，写管理员 |
+| GET / PUT / DELETE | `/api/books/{id}/` | 图书详情 / 更新 / 删除 | 读公开，写管理员 |
+| GET / POST | `/api/categories/` | 分类列表 / 创建 | 读公开，写管理员 |
+| GET / POST | `/api/borrow-records/` | 借阅记录（借阅） | 登录（仅本人） |
 | POST | `/api/borrow-records/{id}/return_book/` | 归还图书 | 登录（仅本人） |
-| GET/POST | `/api/reviews/` | 书评列表 / 提交评分评论 | 读公开，写登录 |
+| GET / POST | `/api/reviews/` | 书评列表 / 提交评分评论 | 读公开，写登录 |
 | GET | `/api/action-logs/` | 操作日志 | 管理员 |
-
----
 
 ## 自动化测试
 
@@ -165,17 +192,18 @@ python manage.py runserver
 python manage.py test library -v 2
 ```
 
-测试覆盖：安全权限控制（未认证 / 普通用户越权 / 提权防护 / 弱密码注册）、借阅库存业务（扣减 / 回补 / 重复借阅 / 库存不足 / 逾期判断 / 图书被删归还）、书评评分（校验 / 去重更新）、操作日志等。
+测试覆盖：
 
----
+- 安全权限控制：未认证访问、普通用户越权、提权防护、弱密码注册
+- 借阅库存业务：扣减 / 回补、重复借阅、库存不足、逾期判断、图书被删归还
+- 书评评分：校验、去重更新
+- 操作日志：关键操作记录、查看权限
 
 ## 使用说明
 
 1. **游客**：可直接浏览图书与搜索，登录后可借阅。
 2. **普通用户**：在「用户中心」「我的借阅」中借书、还书、查看逾期情况；在图书详情页评分评论。
-3. **管理员**：通过「图书列表」「添加图书」「分类管理」维护馆藏；可查看全部借阅记录与操作日志。
-
----
+3. **管理员**：通过「图书列表」「添加图书」「分类管理」维护馆藏；在「操作日志」中审计全部用户操作。
 
 ## 开源说明
 
