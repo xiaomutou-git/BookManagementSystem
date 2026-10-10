@@ -12,17 +12,22 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# 安全要求：密钥从环境变量读取，禁止硬编码进源码；未配置时回退到仅限本地开发的默认值
-SECRET_KEY = os.environ.get(
-    'DJANGO_SECRET_KEY',
-    '***REMOVED-HARDCODED-DJANGO-SECRET-KEY***'
-)
+# 安全要求：禁止硬编码密钥。生产环境必须通过 DJANGO_SECRET_KEY 提供；
+# 开发/测试未提供时生成一次性随机密钥（进程重启后既有会话失效），
+# 绝不使用任何已公开在仓库中的默认值。
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+if not SECRET_KEY:
+    if os.environ.get('DJANGO_DEBUG', 'True').lower() not in ('true', '1', 'yes'):
+        raise ImproperlyConfigured('生产环境必须通过环境变量 DJANGO_SECRET_KEY 提供密钥')
+    from django.core.management.utils import get_random_secret_key
+    SECRET_KEY = get_random_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # 安全要求：生产环境必须通过环境变量关闭 DEBUG
